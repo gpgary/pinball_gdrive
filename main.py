@@ -19,13 +19,17 @@ import auth
 SCOPES = 'https://www.googleapis.com/auth/drive'
 CLIENT_SECRET_FILE = 'C:\\GDrive_download\\client_secret.json'
 APPLICATION_NAME = 'Drive API Python Quickstart'
+download_path = 'C:\\GDrive_download\\download\\'
 authInst = auth.auth(SCOPES,CLIENT_SECRET_FILE,APPLICATION_NAME)
 credentials = authInst.getCredentials()
 
 http = credentials.authorize(httplib2.Http())
 drive_service = discovery.build('drive', 'v3', http=http)
 
-def downloadFile(file_id,filepath):
+def downloadFile(file_id,filepath):    
+    if not os.path.exists(download_path):
+        os.makedirs(download_path)
+
     print('download target '+file_id+' filepath '+filepath)
     request = drive_service.files().get_media(fileId=file_id)    
     fh = io.BytesIO()
@@ -53,7 +57,7 @@ def searchFile(size,query):
         for item in items:
             print(item)
             print('{0} ({1})'.format(item['name'], item['id']))
-            downloadFile(item['id'],'C:\\GDrive_download\\download\\'+item['name'])
+            downloadFile(item['id'],download_path+item['name'])
             print('End downlaod '+item['name']+' !!')
     
 searchFile(10,"name contains 'pUCE'")
