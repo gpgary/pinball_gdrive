@@ -3,6 +3,14 @@ from __future__ import print_function
 import httplib2
 import os, io , shutil
 from pynput.keyboard import Controller
+import auth
+import pyglet
+import threading
+import multiprocessing
+import time
+import tkinter as tk
+import tkinter.messagebox
+import hashlib
 
 from apiclient import discovery
 from oauth2client import client
@@ -14,7 +22,8 @@ try:
     flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
 except ImportError:
     flags = None
-import auth
+
+#import tk_test
 # If modifying these scopes, delete your previously saved credentials
 # at ~/.credentials/drive-python-quickstart.json
 # SCOPES = 'https://www.googleapis.com/auth/drive'
@@ -23,19 +32,15 @@ CLIENT_SECRET_FILE = 'C:\\GDrive_download\\client_secret.json'
 APPLICATION_NAME = 'Drive API Python Quickstart'
 pUCE_download_path = 'C:\\GDrive_download\\download\\'
 pUCE_extraced_path = 'C:\\GDrive_download\\extracted\\'
+
 authInst = auth.auth(SCOPES,CLIENT_SECRET_FILE,APPLICATION_NAME)
 credentials = authInst.getCredentials()
 
 http = credentials.authorize(httplib2.Http())
 drive_service = discovery.build('drive', 'v3', http=http)
-# control keyboard press ctrl+w to close browser tab
-keyboard = Controller()
-print('Start close tab')
-with keyboard.pressed(keyboard._Key.ctrl):
-    keyboard.press('w')
-keyboard.release(keyboard._Key.ctrl)
-keyboard.release('w')
-print('End close tab')
+#os.system('taskkill /F /IM chrome.exe')
+print('Authonticated !!!!!!')
+
 
 def listFiles(size):
     results = drive_service.files().list(
@@ -47,6 +52,7 @@ def listFiles(size):
         print('Files:')
         for item in items:
             print('{0} ({1})'.format(item['name'], item['id']))
+
 
 def downloadFile(file_id,filepath):    
     if not os.path.exists(pUCE_download_path):
@@ -65,7 +71,7 @@ def downloadFile(file_id,filepath):
             f.write(fh.read())                    
 
 
-def searchFile(size,query):
+def searchFile(size,query):    
     name = ''
     fieldId = ''
     results = drive_service.files().list(
@@ -74,7 +80,7 @@ def searchFile(size,query):
     if not items:
         print('No files found.')
     else:
-        print('Files:')
+        print('Files:')        
         for item in items:
             print(item)
             print('{0} ({1})'.format(item['name'], item['id']))
@@ -82,7 +88,7 @@ def searchFile(size,query):
             print('End downlaod '+item['name']+' !!')
             extractFile(item['name'])
 
-    exit()
+    print('End download google drive files')        
 
 
 def extractFile(path):
@@ -98,11 +104,17 @@ def extractFile(path):
     else:
         moveFile(os.path.splitext(path)[0])
 
+    # Stephen unpack tool
+    move_comman = 'C:\\GDrive_download\\pUCEUnpackerNew\\'
+    os.chdir(move_comman)
+    print(os.system('dir'))
+    unpakcer_command = 'C:\\GDrive_download\\pUCEUnpackerNew\\pUCE_Unpacker.exe ' + pUCE_download_path + os.path.basename(path)
+    os.system(unpakcer_command)
+
 
 def moveFile(target):
     print('Start move '+ target +' files to pinball folder')
     pinball_path = 'C:\\Visual Pinball\\'
-    
     # move rom file
     source_files = os.listdir(pUCE_extraced_path + target+'\\rom\\')    
     for file in source_files:
@@ -134,6 +146,62 @@ def moveFile(target):
             # shutil.move(pUCE_extraced_path + target+'\\table\\*.directb2s',pinball_path+'Tables\\')
             shutil.move(os.path.join(pUCE_extraced_path + target + '\\backglass\\',file), os.path.join(pinball_path + 'Tables\\',file))
 
-    print('End move '+ pUCE_extraced_path + target)
+    print('End move '+ pUCE_extraced_path + target)        
+        
+
+def run_download_gif():
+    animation = pyglet.image.load_animation('C:\\GDrive_download\\atgames_loading.gif')
+    animSprite = pyglet.sprite.Sprite(animation)
     
+    display = pyglet.canvas.Display()    
+    device_screen = display.get_default_screen()
+
+    window = pyglet.window.Window(fullscreen=True, screen=device_screen)
+        
+    r,g,b,alpha = 0,0,0,0
+    
+    pyglet.gl.glClearColor(r,g,b,alpha)
+    
+    @window.event
+    def on_draw():
+        window.clear()
+        animSprite.draw() 
+
+    pyglet.app.run()
+    print('end pyglet app run')
+    pyglet.app.exit()     
+
+    
+
+def run_end_message():
+    window = pyglet.window.Window(width=512, height=256)
+
+    label = pyglet.text.Label('Google Drive Sync Completed',
+        font_name = 'Arial',
+        font_size = 24,
+        x=30, 
+        y=128,
+    )    
+    
+    @window.event    
+    def on_draw():
+        window.clear()
+        label.draw()  
+    
+    pyglet.clock.schedule_interval(run_end_message, 3.0)    
+    pyglet.app.run()    
+
+    
+
+t = threading.Thread(target=run_download_gif)
+t.start()
+
 searchFile(10,"name contains '.pUCE'")
+print('End search file')
+
+pyglet.app.exit()
+print('End search pyglet')
+
+tkinter.messagebox.showinfo(title = 'download message', message = 'Google Drive Sync Completed !!!')
+
+exit()
