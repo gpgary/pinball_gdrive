@@ -1,7 +1,7 @@
 
 from __future__ import print_function
 import httplib2
-import os, io , shutil
+import os, io , shutil ,sys
 from pynput.keyboard import Controller
 import auth
 import pyglet
@@ -9,8 +9,10 @@ import threading
 import multiprocessing
 import time
 import tkinter as tk
-import tkinter.messagebox
+import tkinter.font as tkFont
+#import tkinter.messagebox
 import hashlib
+import math
 
 from apiclient import discovery
 from oauth2client import client
@@ -38,7 +40,7 @@ credentials = authInst.getCredentials()
 
 http = credentials.authorize(httplib2.Http())
 drive_service = discovery.build('drive', 'v3', http=http)
-#os.system('taskkill /F /IM chrome.exe')
+os.system('taskkill /F /IM chrome.exe')
 print('Authonticated !!!!!!')
 
 
@@ -91,25 +93,40 @@ def searchFile(size,query):
     print('End download google drive files')        
 
 
-def extractFile(path):
+def extractFile(path):    
+    print('Start extract file : '+ path)    
     if not os.path.exists(pUCE_extraced_path):
         os.makedirs(pUCE_extraced_path)
-    print('Extract pUCE filePath = '+ pUCE_extraced_path + ' fileName = ' + os.path.splitext(path)[0])
-    unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + pUCE_extraced_path + os.path.splitext(path)[0] + ' ' + pUCE_download_path + os.path.basename(path)
-    print(unsquashfs_command)
-    os.system(unsquashfs_command)
-    #check extract pUCE file success
-    if not os.path.exists(pUCE_extraced_path+os.path.splitext(path)[0]):
-        print(os.path.basename(path)+' extract fail !!!')
-    else:
-        moveFile(os.path.splitext(path)[0])
 
-    # Stephen unpack tool
-    move_comman = 'C:\\GDrive_download\\pUCEUnpackerNew\\'
-    os.chdir(move_comman)
-    print(os.system('dir'))
-    unpakcer_command = 'C:\\GDrive_download\\pUCEUnpackerNew\\pUCE_Unpacker.exe ' + pUCE_download_path + os.path.basename(path)
-    os.system(unpakcer_command)
+    # extract .pUCE file
+    if ".pUCE" in path:        
+        print('Extract pUCE filePath = '+ pUCE_extraced_path + ' fileName = ' + os.path.splitext(path)[0])        
+        unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + pUCE_extraced_path + os.path.splitext(path)[0] + ' ' + pUCE_download_path + os.path.basename(path)
+        print(unsquashfs_command)
+        os.system(unsquashfs_command)
+
+        #check extract pUCE file success
+        if not os.path.exists(pUCE_extraced_path+os.path.splitext(path)[0]):
+            print(os.path.basename(path)+' extract fail !!!')
+        else:
+            moveFile(os.path.splitext(path)[0])
+
+    # extract UCE2 file
+    if ".UCE2" in path:                
+        UCE2_games_path = 'C:\\Games\\'
+        game_hash_name = md5_hash(path)
+        print ("%s %s" % (game_hash_name, path))        
+        if not os.path.exists(UCE2_games_path + game_hash_name):
+            os.makedirs(UCE2_games_path + game_hash_name)
+    
+        unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + UCE2_games_path + game_hash_name + ' ' + pUCE_download_path + path
+        print(unsquashfs_command)
+        os.system(unsquashfs_command)
+    #move_comman = 'C:\\GDrive_download\\pUCEUnpackerNew\\'
+    #os.chdir(move_comman)
+    #print(os.system('dir'))
+    #unpakcer_command = 'C:\\GDrive_download\\pUCEUnpackerNew\\pUCE_Unpacker.exe ' + pUCE_download_path + os.path.basename(path)
+    #os.system(unpakcer_command)
 
 
 def moveFile(target):
@@ -147,7 +164,21 @@ def moveFile(target):
             shutil.move(os.path.join(pUCE_extraced_path + target + '\\backglass\\',file), os.path.join(pinball_path + 'Tables\\',file))
 
     print('End move '+ pUCE_extraced_path + target)        
-        
+
+
+def md5_hash(fileName):
+    print('Start md5 hash file : ' + pUCE_download_path + fileName)
+    m = hashlib.md5()
+    try:
+        fd = open(pUCE_download_path + fileName,"rb")
+    except IOError:
+        print ("Reading file has problem:", pUCE_download_path + fileName)
+        return
+    x = fd.read()
+    fd.close()
+    m.update(x)
+    return m.hexdigest().upper()
+
 
 def run_download_gif():
     animation = pyglet.image.load_animation('C:\\GDrive_download\\atgames_loading.gif')
@@ -195,13 +226,28 @@ def run_end_message():
 
 t = threading.Thread(target=run_download_gif)
 t.start()
-
-searchFile(10,"name contains '.pUCE'")
-print('End search file')
-
+# download .pUCE files
+searchFile(100,"name contains '.pUCE'")
+# download UCE2 files
+searchFile(100,"name contains '.UCE2'")
 pyglet.app.exit()
-print('End search pyglet')
+# show google sync finish message box
+#tkinter.messagebox.showinfo(title = 'download message', message = 'Google Drive Sync Completed !!!')
 
-tkinter.messagebox.showinfo(title = 'download message', message = 'Google Drive Sync Completed !!!')
-
+window = tk.Tk()
+window.title('Message')
+screen_width = math.ceil(window.winfo_screenwidth()/2) - 256
+screen_height = math.ceil(window.winfo_screenheight()/2) - 64
+geometry = '512x64+'+ str(screen_width) +'+'+ str(screen_height)
+print('Screen : '+geometry)
+# screen size
+#window.geometry('512x64+548+476')
+window.geometry(geometry)
+window.configure(background='white')
+# font
+font_style = tkFont.Font(family="Arial", size=24)
+label = tk.Label(window, text='Google Drive Sync Completed !!!', font=font_style)
+label.pack()
+window.after(3000, lambda : window.destroy())
+window.mainloop()
 exit()
