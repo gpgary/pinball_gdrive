@@ -6,14 +6,13 @@ from pynput.keyboard import Controller
 import auth
 import pyglet
 import threading
-import multiprocessing
 import time
 import tkinter as tk
 import tkinter.font as tkFont
 #import tkinter.messagebox
 import hashlib
 import math
-
+import glob
 from apiclient import discovery
 from oauth2client import client
 from oauth2client import tools
@@ -80,7 +79,7 @@ def searchFile(size,query):
     pageSize=size,fields="nextPageToken, files(id, name, kind, mimeType)",q=query).execute()
     items = results.get('files', [])    
     if not items:
-        print('No files found.')
+        print('No files found. ' + query)
     else:
         print('Files:')        
         for item in items:
@@ -111,8 +110,34 @@ def extractFile(path):
         else:
             moveFile(os.path.splitext(path)[0])
 
+    # extract .UCE file
+    if ".UCE" in path:
+        print ('.UCE path = '+ path)
+        game_hash_name = md5_hash(path)
+        print ("%s %s" % (game_hash_name, path))  
+        source_path = pUCE_extraced_path + game_hash_name
+        destination_path = 'C:\\Games\\'
+        unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + source_path + ' ' + pUCE_download_path + '"' +path +'"'
+        print(unsquashfs_command)
+        os.system(unsquashfs_command)
+        # check .dll file exist or not
+        target_path = source_path + '\\emu\\*.dll'
+        print('target_path = ' + target_path)
+        if glob.glob(target_path):
+            print('Exist dll file')
+            if not os.path.exists(destination_path+game_hash_name+'\\emu\\'):
+                os.makedirs(destination_path+game_hash_name+'\\emu\\')
+
+            # move dll file
+            source_files = os.listdir(pUCE_extraced_path + game_hash_name+'\\emu\\')
+            for file in source_files:        
+                if file.endswith('.dll'):                                
+                    shutil.move(os.path.join(pUCE_extraced_path + game_hash_name + '\\emu\\',file), os.path.join('C:\\Games\\'+game_hash_name+'\\emu\\',file))            
+                    print('End move '+ pUCE_extraced_path + game_hash_name)     
+
     # extract UCE2 file
-    if ".UCE2" in path:                
+    if ".UCE2" in path:    
+        print ('Start .UCE2 :'+path)            
         UCE2_games_path = 'C:\\Games\\'
         game_hash_name = md5_hash(path)
         print ("%s %s" % (game_hash_name, path))        
@@ -122,11 +147,6 @@ def extractFile(path):
         unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + UCE2_games_path + game_hash_name + ' ' + pUCE_download_path + path
         print(unsquashfs_command)
         os.system(unsquashfs_command)
-    #move_comman = 'C:\\GDrive_download\\pUCEUnpackerNew\\'
-    #os.chdir(move_comman)
-    #print(os.system('dir'))
-    #unpakcer_command = 'C:\\GDrive_download\\pUCEUnpackerNew\\pUCE_Unpacker.exe ' + pUCE_download_path + os.path.basename(path)
-    #os.system(unpakcer_command)
 
 
 def moveFile(target):
@@ -161,7 +181,7 @@ def moveFile(target):
     for file in source_files:        
         if file.endswith('.directb2s'):            
             # shutil.move(pUCE_extraced_path + target+'\\table\\*.directb2s',pinball_path+'Tables\\')
-            shutil.move(os.path.join(pUCE_extraced_path + target + '\\backglass\\',file), os.path.join(pinball_path + 'Tables\\',file))
+            shutil.move(os.path.join(pUCE_extraced_path + target + '\\backglass\\',file), os.path.join(pinball_path + 'Tables\\',file))         
 
     print('End move '+ pUCE_extraced_path + target)        
 
@@ -202,6 +222,7 @@ def run_download_gif():
     print('end pyglet app run')
     pyglet.app.exit()     
 
+
     
 
 def run_end_message():
@@ -228,11 +249,12 @@ t = threading.Thread(target=run_download_gif)
 t.start()
 # download .pUCE files
 searchFile(100,"name contains '.pUCE'")
+# download UCE files
+searchFile(100,"name contains '.UCE'")
 # download UCE2 files
 searchFile(100,"name contains '.UCE2'")
 pyglet.app.exit()
-# show google sync finish message box
-#tkinter.messagebox.showinfo(title = 'download message', message = 'Google Drive Sync Completed !!!')
+
 
 window = tk.Tk()
 window.title('Message')
@@ -241,7 +263,6 @@ screen_height = math.ceil(window.winfo_screenheight()/2) - 64
 geometry = '512x64+'+ str(screen_width) +'+'+ str(screen_height)
 print('Screen : '+geometry)
 # screen size
-#window.geometry('512x64+548+476')
 window.geometry(geometry)
 window.configure(background='white')
 # font
