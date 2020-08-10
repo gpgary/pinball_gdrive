@@ -118,22 +118,26 @@ def extractFile(path):
         source_path = pUCE_extraced_path + game_hash_name
         destination_path = 'C:\\Games\\'
         unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + source_path + ' ' + pUCE_download_path + '"' +path +'"'
+        #unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + source_path + ' ' + 'C:\\Games\\'
         print(unsquashfs_command)
         os.system(unsquashfs_command)
         # check .dll file exist or not
-        target_path = source_path + '\\emu\\*.dll'
-        print('target_path = ' + target_path)
-        if glob.glob(target_path):
-            print('Exist dll file')
-            if not os.path.exists(destination_path+game_hash_name+'\\emu\\'):
-                os.makedirs(destination_path+game_hash_name+'\\emu\\')
+        #target_path = source_path + '\\emu\\*.dll'
+        #target_path = source_path
+        #print('target_path = ' + source_path)        
+        #if glob.glob(target_path):
+            #print('Exist dll file')            
+        #    if not os.path.exists(destination_path+game_hash_name):
+        #        os.makedirs(destination_path+game_hash_name)
 
             # move dll file
-            source_files = os.listdir(pUCE_extraced_path + game_hash_name+'\\emu\\')
-            for file in source_files:        
-                if file.endswith('.dll'):                                
-                    shutil.move(os.path.join(pUCE_extraced_path + game_hash_name + '\\emu\\',file), os.path.join('C:\\Games\\'+game_hash_name+'\\emu\\',file))            
-                    print('End move '+ pUCE_extraced_path + game_hash_name)     
+            #source_files = os.listdir(pUCE_extraced_path + game_hash_name+'\\emu\\')
+            #for file in source_files:        
+            #    if file.endswith('.dll'):                                
+            #        shutil.move(os.path.join(pUCE_extraced_path + game_hash_name + '\\emu\\',file), os.path.join('C:\\Games\\'+game_hash_name+'\\emu\\',file))            
+            #        print('End move '+ pUCE_extraced_path + game_hash_name)     
+        shutil.move(os.path.join(pUCE_extraced_path + game_hash_name ), os.path.join('C:\\Games\\'))
+            
 
     # extract UCE2 file
     if ".UCE2" in path:    
