@@ -1,7 +1,7 @@
 
 from __future__ import print_function
 import httplib2
-import os, io , shutil ,sys
+import os, io, shutil, sys, logging
 from pynput.keyboard import Controller
 import auth
 import pyglet
@@ -34,25 +34,34 @@ APPLICATION_NAME = 'Drive API Python Quickstart'
 pUCE_download_path = 'C:\\GDrive_download\\download\\'
 pUCE_extraced_path = 'C:\\GDrive_download\\extracted\\'
 
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s %(levelname)s %(message)s',
+                    handlers=[logging.FileHandler('C:\GDrive_download\G_Sync.log','w','utf-8'), ])
+logging.info('Google Drive Sync Start !!!')
+
 authInst = auth.auth(SCOPES,CLIENT_SECRET_FILE,APPLICATION_NAME)
 credentials = authInst.getCredentials()
-
 http = credentials.authorize(httplib2.Http())
 drive_service = discovery.build('drive', 'v3', http=http)
-os.system('taskkill /F /IM chrome.exe')
-print('Authonticated !!!!!!')
+#os.system('taskkill /F /IM chrome.exe')
+print('Authenticated !!!!!!')
+logging.info('Google Account Authenticated !!')
+
 
 
 def listFiles(size):
+    logging.info('Start list files')
     results = drive_service.files().list(
         pageSize=size,fields="nextPageToken, files(id, name)").execute()
     items = results.get('files', [])
     if not items:
         print('No files found.')
+        logging.info('No files found.')
     else:
         print('Files:')
         for item in items:
             print('{0} ({1})'.format(item['name'], item['id']))
+            logging.info('{0} ({1})'.format(item['name'], item['id']))
 
 
 def downloadFile(file_id,filepath):    
@@ -60,6 +69,7 @@ def downloadFile(file_id,filepath):
         os.makedirs(pUCE_download_path)
 
     print('download target '+file_id+' filepath '+filepath)
+    logging.info('download target '+file_id+' filepath '+filepath)
     request = drive_service.files().get_media(fileId=file_id)    
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
@@ -67,12 +77,14 @@ def downloadFile(file_id,filepath):
     while done is False:
         status, done = downloader.next_chunk()
         print("Download %d%%." % int(status.progress() * 100))        
+        logging.info("Download %d%%." % int(status.progress() * 100))
         with io.open(filepath,'wb') as f:
             fh.seek(0)
             f.write(fh.read())                    
 
 
 def searchFile(size,query):    
+    logging.info('Start searching '+query)
     name = ''
     fieldId = ''
     results = drive_service.files().list(
@@ -80,123 +92,114 @@ def searchFile(size,query):
     items = results.get('files', [])    
     if not items:
         print('No files found. ' + query)
+        logging.info('No files found. ' + query)
     else:
-        print('Files:')        
+        print('Files:')
+        logging.info('Files:')
         for item in items:
             print(item)
+            logging.info(item)
             print('{0} ({1})'.format(item['name'], item['id']))
+            logging.info('{0} ({1})'.format(item['name'], item['id']))
             downloadFile(item['id'],pUCE_download_path+item['name'])
             print('End downlaod '+item['name']+' !!')
+            logging.info('End downlaod '+item['name']+' !!')
             extractFile(item['name'])
 
-    print('End download google drive files')        
+    print('End download google drive files')
+    logging.info('End download google drive files') 
 
 
-def extractFile(path):    
-    print('Start extract file : '+ path)    
+def extractFile(path):            
     if not os.path.exists(pUCE_extraced_path):
         os.makedirs(pUCE_extraced_path)
 
     # extract .pUCE file
     if ".pUCE" in path:        
-        print('Extract pUCE filePath = '+ pUCE_extraced_path + ' fileName = ' + os.path.splitext(path)[0])        
+        print('Extract pUCE filePath = '+ pUCE_extraced_path + ' fileName = ' + os.path.splitext(path)[0])
+        logging.info('Start extract pUCE filePath = '+ pUCE_extraced_path + ' fileName = ' + os.path.splitext(path)[0])
         unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + pUCE_extraced_path + os.path.splitext(path)[0] + ' ' + pUCE_download_path + os.path.basename(path)
         print(unsquashfs_command)
+        logging.info(unsquashfs_command)
         os.system(unsquashfs_command)
 
         #check extract pUCE file success
         if not os.path.exists(pUCE_extraced_path+os.path.splitext(path)[0]):
             print(os.path.basename(path)+' extract fail !!!')
+            logging.info(os.path.basename(path)+' extract fail !!!')
         else:
             moveFile(os.path.splitext(path)[0])
 
-    # extract .UCE file
-    if ".UCE" in path:
-        print ('.UCE path = '+ path)
+    # extract _Cloud_Win.UCE file to C:\Games
+    if "_Cloud_Win.UCE" in path:
+        print ('_Cloud_Win.UCE path = '+ path)
+        logging.info('Start extract _Cloud_Win.UCE : '+ path)
         game_hash_name = md5_hash(path)
         print ("%s %s" % (game_hash_name, path))  
-        source_path = pUCE_extraced_path + game_hash_name
-        destination_path = 'C:\\Games\\'
-        unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + source_path + ' ' + pUCE_download_path + '"' +path +'"'
-        #unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + source_path + ' ' + 'C:\\Games\\'
+        logging.info("%s %s" % (game_hash_name, path))        
+        UCE_path = 'C:\\Games\\'
+        unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + UCE_path + game_hash_name + ' ' + pUCE_download_path + '"' +path +'"'        
         print(unsquashfs_command)
-        os.system(unsquashfs_command)
-        # check .dll file exist or not
-        #target_path = source_path + '\\emu\\*.dll'
-        #target_path = source_path
-        #print('target_path = ' + source_path)        
-        #if glob.glob(target_path):
-            #print('Exist dll file')            
-        #    if not os.path.exists(destination_path+game_hash_name):
-        #        os.makedirs(destination_path+game_hash_name)
-
-            # move dll file
-            #source_files = os.listdir(pUCE_extraced_path + game_hash_name+'\\emu\\')
-            #for file in source_files:        
-            #    if file.endswith('.dll'):                                
-            #        shutil.move(os.path.join(pUCE_extraced_path + game_hash_name + '\\emu\\',file), os.path.join('C:\\Games\\'+game_hash_name+'\\emu\\',file))            
-            #        print('End move '+ pUCE_extraced_path + game_hash_name)     
-        shutil.move(os.path.join(pUCE_extraced_path + game_hash_name ), os.path.join('C:\\Games\\'))
+        logging.info(unsquashfs_command)
+        os.system(unsquashfs_command)                
             
 
     # extract UCE2 file
     if ".UCE2" in path:    
-        print ('Start .UCE2 :'+path)            
+        print ('Start .UCE2 :'+path)     
+        logging.info('Start extract .UCE2 : '+path)       
         UCE2_games_path = 'C:\\Games\\'
         game_hash_name = md5_hash(path)
-        print ("%s %s" % (game_hash_name, path))        
-        if not os.path.exists(UCE2_games_path + game_hash_name):
-            os.makedirs(UCE2_games_path + game_hash_name)
-    
-        unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + UCE2_games_path + game_hash_name + ' ' + pUCE_download_path + path
+        print ("%s %s" % (game_hash_name, path))                
+        unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + UCE2_games_path + game_hash_name + ' ' + pUCE_download_path + '"' +path +'"'
         print(unsquashfs_command)
+        logging.info(unsquashfs_command)
         os.system(unsquashfs_command)
 
 
 def moveFile(target):
     print('Start move '+ target +' files to pinball folder')
+    logging.info('Start move '+ target +' files to pinball folder')
     pinball_path = 'C:\\Visual Pinball\\'
     # move rom file
     source_files = os.listdir(pUCE_extraced_path + target+'\\rom\\')    
     for file in source_files:
-        if file.endswith('.zip'):
-            # shutil.move(pUCE_extraced_path + target+'\\rom\\*.zip',pinball_path+'VPinMAME\\roms\\')        
+        if file.endswith('.zip'):            
             shutil.move(os.path.join(pUCE_extraced_path + target + '\\rom\\',file), os.path.join(pinball_path + 'VPinMAME\\roms\\',file))
 
     source_files = os.listdir(pUCE_extraced_path + target+'\\table\\')
     for file in source_files:
         # move nv file
-        if file.endswith('.nv'):            
-            # shutil.move(pUCE_extraced_path + target+'\\table\\*.nv',pinball_path+'VPinMAME\\nvram\\')
+        if file.endswith('.nv'):                        
             shutil.move(os.path.join(pUCE_extraced_path + target + '\\table\\',file), os.path.join(pinball_path + 'VPinMAME\\nvram\\',file))
 
         # move cfg file
-        if file.endswith('.cfg'):            
-            # shutil.move(pUCE_extraced_path + target+'\\table\\*.cfg',pinball_path+'VPinMAME\\cfg\\')
+        if file.endswith('.cfg'):                        
             shutil.move(os.path.join(pUCE_extraced_path + target + '\\table\\',file), os.path.join(pinball_path + 'VPinMAME\\cfg\\',file))
 
         # move vpx file
-        if file.endswith('.vpx'):                
-            # shutil.move(pUCE_extraced_path + target+'\\table\\*.vpx',pinball_path+'Tables\\')
+        if file.endswith('.vpx'):                            
             shutil.move(os.path.join(pUCE_extraced_path + target + '\\table\\',file), os.path.join(pinball_path + 'Tables\\',file))
 
     # move directb2s file
     source_files = os.listdir(pUCE_extraced_path + target+'\\backglass\\')
     for file in source_files:        
-        if file.endswith('.directb2s'):            
-            # shutil.move(pUCE_extraced_path + target+'\\table\\*.directb2s',pinball_path+'Tables\\')
+        if file.endswith('.directb2s'):                        
             shutil.move(os.path.join(pUCE_extraced_path + target + '\\backglass\\',file), os.path.join(pinball_path + 'Tables\\',file))         
 
-    print('End move '+ pUCE_extraced_path + target)        
+    print('End move '+ pUCE_extraced_path + target)
+    logging.info('End move '+ pUCE_extraced_path + target)
 
 
 def md5_hash(fileName):
     print('Start md5 hash file : ' + pUCE_download_path + fileName)
+    logging.info('Start md5 hash file : ' + pUCE_download_path + fileName)
     m = hashlib.md5()
     try:
         fd = open(pUCE_download_path + fileName,"rb")
     except IOError:
         print ("Reading file has problem:", pUCE_download_path + fileName)
+        logging.info("Reading file has problem:", pUCE_download_path + fileName)
         return
     x = fd.read()
     fd.close()
@@ -252,11 +255,11 @@ def run_end_message():
 t = threading.Thread(target=run_download_gif)
 t.start()
 # download .pUCE files
-searchFile(100,"name contains '.pUCE'")
+searchFile(100,"name contains '.pUCE' and mimeType != 'application/vnd.google-apps.folder'")
 # download UCE files
-searchFile(100,"name contains '.UCE'")
+searchFile(100,"name contains '.UCE' and mimeType != 'application/vnd.google-apps.folder'")
 # download UCE2 files
-searchFile(100,"name contains '.UCE2'")
+searchFile(100,"name contains '.UCE2' and mimeType != 'application/vnd.google-apps.folder'")
 pyglet.app.exit()
 
 
@@ -265,7 +268,6 @@ window.title('Message')
 screen_width = math.ceil(window.winfo_screenwidth()/2) - 256
 screen_height = math.ceil(window.winfo_screenheight()/2) - 64
 geometry = '512x64+'+ str(screen_width) +'+'+ str(screen_height)
-print('Screen : '+geometry)
 # screen size
 window.geometry(geometry)
 window.configure(background='white')
