@@ -13,6 +13,7 @@ import tkinter.font as tkFont
 import hashlib
 import math
 import glob
+import subprocess
 from apiclient import discovery
 from oauth2client import client
 from oauth2client import tools
@@ -141,7 +142,9 @@ def extractFile(path):
         unsquashfs_command = 'C:\\GDrive_download\\unsquashfs\\unsquashfs.exe -f -d ' + UCE_path + game_hash_name + ' ' + pUCE_download_path + '"' +path +'"'        
         print(unsquashfs_command)
         logging.info(unsquashfs_command)
-        os.system(unsquashfs_command)                
+        os.system(unsquashfs_command)
+        print('Extract UCE file :'+ UCE_path + game_hash_name)
+        extractDCFile(UCE_path + game_hash_name)
             
 
     # extract UCE2 file
@@ -155,6 +158,30 @@ def extractFile(path):
         print(unsquashfs_command)
         logging.info(unsquashfs_command)
         os.system(unsquashfs_command)
+
+
+
+def extractDCFile(path):
+    rom_path = path + '\\rom\\'
+    source_files = os.listdir(rom_path)
+    DC_rom_type = ['GDI','CDI','CHD ']
+    print('Start extract DC File : ' + rom_path)
+    logging.info('Start extract DC File : ' + rom_path)
+    if not os.path.exists(rom_path):
+        print('No Rom Folder !!')        
+    else:
+        for file in source_files:
+            print('Check 7z files : ' +file)
+            if file.endswith('.7z'):
+                print('Start check 7z file :' + file)
+                logging.info('Start check 7z file :' + file)
+                for i in range(0,len(DC_rom_type)):
+                    print('"C:\AtGames\AutoUpdater\\7z.exe" e "' + rom_path + file + '" -aos -o' + rom_path + ' *.' + DC_rom_type[i] + ' -r')
+                    logging.info('"C:\AtGames\AutoUpdater\\7z.exe" e "' + rom_path + file + '" -aos -o' + rom_path + ' *.' + DC_rom_type[i] + ' -r')
+                    subprocess.call('"C:\AtGames\AutoUpdater\\7z.exe" e "' + rom_path + file + '" -aos -o' + rom_path + ' *.' + DC_rom_type[i] + ' -r')
+            else:
+                print('No 7z file')
+                logging.info('No 7z file')    
 
 
 def moveFile(target):
@@ -255,11 +282,12 @@ def run_end_message():
 t = threading.Thread(target=run_download_gif)
 t.start()
 # download .pUCE files
-searchFile(100,"name contains '.pUCE' and mimeType != 'application/vnd.google-apps.folder'")
+#searchFile(100,"name contains '.pUCE' and mimeType != 'application/vnd.google-apps.folder'")
 # download UCE files
 searchFile(100,"name contains '.UCE' and mimeType != 'application/vnd.google-apps.folder'")
 # download UCE2 files
-searchFile(100,"name contains '.UCE2' and mimeType != 'application/vnd.google-apps.folder'")
+#searchFile(100,"name contains '.UCE2' and mimeType != 'application/vnd.google-apps.folder'")
+#os.system('C:\AtGames\GLM\GLM.exe -a')
 pyglet.app.exit()
 
 
